@@ -1,8 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace gitwatcher
 {
@@ -19,39 +16,100 @@ namespace gitwatcher
                     log = true;
                 }
                 if(args[i] == "--help" || args[i] == "-h") {
-                    Console.WriteLine("usage: gitwatcher [--log | --help | --interval <seconds>]");
+                    Log("usage: gitwatcher [--log | --help | --interval <seconds>]", true);
                     return;
                 }
             }
 
             string? gitVersion = Execute("--version");
             if(gitVersion == null) {
-                Console.WriteLine("error: git not found");
+                Log("error: git not found", true);
                 return;
             }
 
-            Console.WriteLine("gitwatcher build 1, " + gitVersion + "\n\tpull interval: " + interval + " (seconds)\n\tlog: " + (log ? "everything" : "important"));
+            Log("gitwatcher build 1, " +
+                gitVersion +
+                "\n\tpull interval: " +
+                interval +
+                " (seconds)\n\tlog: " +
+                (log ? "everything" : "important"),
+            true);
 
             bool firstLoop = true;
+
+            Process? p = null;
+
+            Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) => {
+                if(p != null) {
+                    Log("\tkilling process " + p.Id + "...");
+                    try {
+                        p.Kill();
+                    }catch{}
+                }
+                eventArgs.Cancel = false;
+            };
 
             while(true) {
                 string? pullResult = Execute("pull");
                 if(pullResult == null || pullResult.StartsWith("fatal")) {
-                    Console.WriteLine(pullResult);
+                    Log(pullResult, true);
                     break;
                 }
-                if(log) {
-                    Console.WriteLine("git pull: '" + pullResult + "'");
-                }
+                Log("git pull: '" + pullResult + "'");
                 if(pullResult != "Already up to date." || firstLoop) {
-                    Console.WriteLine(DateTime.Now.ToShortTimeString() + " - restarting...");
+                    Log(DateTime.Now.ToShortTimeString() + " - restarting...", true);
 
-                    
+                    if(p != null) {
+                        Log("\tkilling process " + p.Id + "...");
+                        try {
+                            p.Kill();
+                            p.WaitForExit();
+                            Log("\t\tdone");
+                        }catch (Exception e){
+                            Log("\t\t" + e.Message);
+                        }
+                    }
+
+                    // wait for process to exit completely
+                    Thread.Sleep(100);
+
+                    Log("\treading .gitwatcher/config.json...");
+
+                    if(File.Exists(".gitwatcher/config.json")) {
+                        try{
+                            Config? cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(".gitwatcher/config.json"));
+
+                            if(cfg != null && cfg.FileName != null) {
+                                Log("\tstarting " + cfg.FileName + "...");
+                                p = new Process();
+                                p.StartInfo.FileName = cfg.FileName;
+                                p.StartInfo.UseShellExecute = true;
+                                if(cfg.Args != null) {
+                                    p.StartInfo.Arguments = cfg.Args;
+                                }
+                                p.Start();
+                                Log("\tprocess id: " + p.Id);
+                                Log("\tdone", true);
+                            }else{
+                                Log("\t\trerror", true);
+                            }
+                        }catch (Exception e){
+                            Log("\t\t" + e.Message, true);
+                        }
+                    }else{     
+                        Log("\t\tconfig.json not found", true);
+                    }
                 }
                 Thread.Sleep(interval * 1000);
                 firstLoop = false;
             }
-            Console.WriteLine("bye");
+            Log("bye", true);
+        }
+
+        static void Log(string? text, bool important = false) {
+            if(important || log) {
+                Console.WriteLine(text);
+            }
         }
 
         static string? Execute(string cmd) {
@@ -70,12 +128,14 @@ namespace gitwatcher
                 return null;
             }
         }
-    
-        static void Process_Exited(object? sender, System.EventArgs e)
-        {
-            if(log) {
-                Console.WriteLine("process exited");
-            }
+    }
+
+    class Config {
+        public string? FileName {
+            get; set;
+        }
+        public string? Args {
+            get; set;
         }
     }
 }
