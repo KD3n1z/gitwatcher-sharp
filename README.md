@@ -4,7 +4,7 @@ gitwatcher will be looking for changes in git, immediately pull them, and then r
 here's a [demo](https://github.com/KD3n1z/gitwatcherDemo)
 
 ## usage
-<code>gitwatcher [--log | --help | --interval <seconds>]</code>
+<code>gitwatcher [--interval / -i \<seconds\>] [--log / -l] [--help / -h]</code>
 
 ## installing
 1. download executable for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases) or build it by yourself

@@ -6,7 +6,7 @@ namespace gitwatcher
 {
     internal static class Program
     {
-        static int interval = 1;
+        static int interval = 10;
         static bool log = false;
         static void Main(string[] args) {
             for(int i = 0; i < args.Length; i++) {
@@ -17,7 +17,7 @@ namespace gitwatcher
                     log = true;
                 }
                 if(args[i] == "--help" || args[i] == "-h") {
-                    Log("usage: gitwatcher [--log | --help | --interval <seconds>]", true);
+                    Log("usage: gitwatcher [--interval / -i <seconds>] [--log / -l] [--help / -h]", true);
                     return;
                 }
             }
