@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace gitwatcher
@@ -21,18 +22,31 @@ namespace gitwatcher
                 }
             }
 
+            OSPlatform platform = GetOperatingSystem();
+
+            string platformCfgPath = Path.Combine(".gitwatcher", "config-" + platform.ToString().ToLower() + ".json");
+            string cfgPath = Path.Combine(".gitwatcher", "config.json");
+            
+            string shell = "bash";
+            string shellArgs = "-c \"%cmd\"";
+            bool replaceQuotes = true;
+
+            if(platform == OSPlatform.Windows) {
+                shell = "cmd.exe";
+                shellArgs = "/C%cmd";
+                replaceQuotes = false;
+            }
+
             string? gitVersion = Execute("--version");
             if(gitVersion == null) {
                 Log("error: git not found", true);
                 return;
             }
 
-            Log("gitwatcher build 1, " +
-                gitVersion +
-                "\n\tpull interval: " +
-                interval +
-                " (seconds)\n\tlog: " +
-                (log ? "everything" : "important"),
+            Log("gitwatcher build 1, " + gitVersion +
+                "\n\tpull interval: " + interval + " (seconds)" + 
+                "\n\tlog: " + (log ? "everything" : "important") +
+                "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",
             true);
 
             bool firstLoop = true;
@@ -41,9 +55,10 @@ namespace gitwatcher
 
             Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) => {
                 if(p != null) {
-                    Log("\tkilling process " + p.Id + "...");
+                    Log("killing process " + p.Id + "...");
                     try {
                         p.Kill();
+                        Log("done");
                     }catch{}
                 }
                 eventArgs.Cancel = false;
@@ -56,37 +71,37 @@ namespace gitwatcher
                     break;
                 }
                 Log("git pull: '" + pullResult + "'");
-                if(pullResult != "Already up to date." || firstLoop) {
+                if((pullResult != "Already up to date." && !string.IsNullOrWhiteSpace(pullResult)) || firstLoop) {
                     Log(DateTime.Now.ToShortTimeString() + " - restarting...", true);
 
                     if(p != null) {
                         Log("\tkilling process " + p.Id + "...");
                         try {
                             p.Kill();
-                            p.WaitForExit();
                             Log("\t\tdone");
                         }catch (Exception e){
                             Log("\t\t" + e.Message);
                         }
                     }
 
-                    // wait for process to exit completely
-                    Thread.Sleep(100);
+                    string cCfgPath = File.Exists(platformCfgPath) ? platformCfgPath : cfgPath;
 
-                    Log("\treading .gitwatcher/config.json...");
+                    if(File.Exists(cCfgPath)) {
+                        Log("\treading " + cCfgPath + "...");
 
-                    if(File.Exists(".gitwatcher/config.json")) {
+                        Config? cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(cCfgPath));
+
                         try{
-                            Config? cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(".gitwatcher/config.json"));
-
-                            if(cfg != null && cfg.FileName != null) {
-                                Log("\tstarting " + cfg.FileName + "...");
+                            if(cfg != null && cfg.cmd != null) {
                                 p = new Process();
-                                p.StartInfo.FileName = cfg.FileName;
+                                p.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
                                 p.StartInfo.UseShellExecute = true;
-                                if(cfg.Args != null) {
-                                    p.StartInfo.Arguments = cfg.Args;
-                                }
+
+                                bool cReplaceQuotes = (cfg.replaceQuotes != null ? cfg.replaceQuotes : replaceQuotes) == true;
+
+                                p.StartInfo.Arguments = (cfg.args != null ? cfg.args : shellArgs)
+                                    .Replace("%cmd", cReplaceQuotes ? cfg.cmd.Replace("\"", "\\\"") : cfg.cmd);
+                                Log("\trunning " + p.StartInfo.FileName + " " + p.StartInfo.Arguments + "... (replaceQuotes=" + cReplaceQuotes + ")");
                                 p.Start();
                                 Log("\tprocess id: " + p.Id);
                                 Log("\tdone", true);
@@ -96,8 +111,8 @@ namespace gitwatcher
                         }catch (Exception e){
                             Log("\t\t" + e.Message, true);
                         }
-                    }else{     
-                        Log("\t\tconfig.json not found", true);
+                    }else{
+                        Log("\tconfig.json not found :(", true);
                     }
                 }
                 Thread.Sleep(interval * 1000);
@@ -128,13 +143,35 @@ namespace gitwatcher
                 return null;
             }
         }
+
+        static OSPlatform GetOperatingSystem() {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                return OSPlatform.OSX;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                return OSPlatform.Linux;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                return OSPlatform.Windows;
+            }
+
+            throw new Exception("Cannot determine operating system!");
+        }
     }
 
     class Config {
-        public string? FileName {
+        public string? cmd {
             get; set;
         }
-        public string? Args {
+        public string? fileName {
+            get; set;
+        }
+        public string? args {
+            get; set;
+        }
+        public bool? replaceQuotes {
             get; set;
         }
     }
