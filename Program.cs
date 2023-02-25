@@ -43,7 +43,7 @@ namespace gitwatcher
                 return;
             }
 
-            Log("gitwatcher build 1, " + gitVersion +
+            Log("gitwatcher build 2, " + gitVersion +
                 "\n\tpull interval: " + interval + " (seconds)" + 
                 "\n\tlog: " + (log ? "everything" : "important") +
                 "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",
@@ -57,7 +57,7 @@ namespace gitwatcher
                 if(p != null) {
                     Log("killing process " + p.Id + "...");
                     try {
-                        p.Kill();
+                        p.Kill(true);
                         Log("done");
                     }catch{}
                 }
@@ -77,7 +77,7 @@ namespace gitwatcher
                     if(p != null) {
                         Log("\tkilling process " + p.Id + "...");
                         try {
-                            p.Kill();
+                            p.Kill(true);
                             Log("\t\tdone");
                         }catch (Exception e){
                             Log("\t\t" + e.Message);
