@@ -25,12 +25,16 @@ publish-osx:
 	dotnet publish -r osx-x64 -o dest/osx-x64 $(pArgs)
 
 publish-all: clean publish-win publish-win-arm64 publish-linux publish-linux-arm64 publish-osx
+
+zip-all: 
 	mkdir dest/zips
 	cd dest/osx-x64; zip zip.zip gitwatcher; mv zip.zip ../zips/macOS.zip
 	cd dest/linux-x64; zip zip.zip gitwatcher; mv zip.zip ../zips/linux-x64.zip
 	cd dest/linux-arm64; zip zip.zip gitwatcher; mv zip.zip ../zips/linux-arm64.zip
 	cd dest/win-x64; zip zip.zip gitwatcher.exe; mv zip.zip ../zips/windows-x64.zip
 	cd dest/win-arm64; zip zip.zip gitwatcher.exe; mv zip.zip ../zips/windows-arm64.zip
+
+paz: publish-all zip-all
 
 publish:
 	dotnet publish -o dest $(pArgs)
