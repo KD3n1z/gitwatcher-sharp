@@ -43,7 +43,7 @@ namespace gitwatcher
                 return;
             }
 
-            Log("gitwatcher build 2, " + gitVersion +
+            Log("gitwatcher v1.0.1, " + gitVersion +
                 "\n\tpull interval: " + interval + " (seconds)" + 
                 "\n\tlog: " + (log ? "everything" : "important") +
                 "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",

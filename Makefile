@@ -1,4 +1,5 @@
 pArgs=--self-contained -c Release -p:PublishSingleFile=true
+zArgs=-9 zip.zip
 
 all: clean build
 
@@ -28,11 +29,11 @@ publish-all: clean publish-win publish-win-arm64 publish-linux publish-linux-arm
 
 zip-all: 
 	mkdir dest/zips
-	cd dest/osx-x64; zip zip.zip gitwatcher; mv zip.zip ../zips/macOS.zip
-	cd dest/linux-x64; zip zip.zip gitwatcher; mv zip.zip ../zips/linux-x64.zip
-	cd dest/linux-arm64; zip zip.zip gitwatcher; mv zip.zip ../zips/linux-arm64.zip
-	cd dest/win-x64; zip zip.zip gitwatcher.exe; mv zip.zip ../zips/windows-x64.zip
-	cd dest/win-arm64; zip zip.zip gitwatcher.exe; mv zip.zip ../zips/windows-arm64.zip
+	cd dest/osx-x64; zip $(zArgs) gitwatcher; mv zip.zip ../zips/macOS.zip
+	cd dest/linux-x64; zip $(zArgs) gitwatcher; mv zip.zip ../zips/linux-x64.zip
+	cd dest/linux-arm64; zip $(zArgs) gitwatcher; mv zip.zip ../zips/linux-arm64.zip
+	cd dest/win-x64; zip $(zArgs) gitwatcher.exe; mv zip.zip ../zips/windows-x64.zip
+	cd dest/win-arm64; zip $(zArgs) gitwatcher.exe; mv zip.zip ../zips/windows-arm64.zip
 
 paz: publish-all zip-all
 
