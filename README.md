@@ -13,8 +13,9 @@ Options:
         
 
 ## Installing
-1. download executable for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases) or build it by yourself
-2. move it to your bin directory:<br>
+1. download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
+2. unzip it
+3. move it to your bin directory:<br>
     typically <code>/usr/local/bin</code> on macOS/linux<br>
     typically <code>C:\Windows</code> on Windows
 
