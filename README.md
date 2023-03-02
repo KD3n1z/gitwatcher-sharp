@@ -7,7 +7,7 @@ Here's a [demo](https://github.com/KD3n1z/gitwatcherDemo)
 gitwatcher [options]
 
 Options:
-* -i --interval \<seconds\> - Pull interval.
+* -i --interval \<seconds\> - Pull interval, default value - 10.
 * -l --log - Log each action.
 * -h --help - Print usage.
         

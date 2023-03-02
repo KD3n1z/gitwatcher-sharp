@@ -21,7 +21,7 @@ namespace gitwatcher
                     log = true;
                 }
                 if(args[i] == "--help" || args[i] == "-h") {
-                    Log("gitwatcher v" + version + ", " + platform + "\n\nUsage: gitwatcher [options]\n\nOptions:\n\t-i --interval <seconds>\tPull interval.\n\t-l --log\t\tLog each action.\n\t-h --help\t\tPrint usage.", true);
+                    Log("gitwatcher v" + version + ", " + platform + "\n\nUsage: gitwatcher [options]\n\nOptions:\n\t-i --interval <seconds>\tPull interval, default value - 10.\n\t-l --log\t\tLog each action.\n\t-h --help\t\tPrint usage.", true);
                     return;
                 }
             }
@@ -68,59 +68,63 @@ namespace gitwatcher
 
             while(true) {
                 string? pullResult = Execute("pull");
-                if(pullResult == null || pullResult.StartsWith("fatal")) {
+                if(pullResult == null || pullResult.StartsWith("fatal") || pullResult.StartsWith("error")) {
                     Log(pullResult, true);
                     break;
                 }
                 Log("git pull: '" + pullResult + "'");
                 if((pullResult != "Already up to date." && !string.IsNullOrWhiteSpace(pullResult)) || firstLoop) {
-                    Log(DateTime.Now.ToShortTimeString() + " - restarting...", true);
-
-                    if(p != null) {
-                        Log("\tkilling process " + p.Id + "...");
-                        try {
-                            p.Kill(true);
-                            Log("\t\tdone");
-                        }catch (Exception e){
-                            Log("\t\t" + e.Message);
-                        }
-                    }
-
-                    string cCfgPath = File.Exists(platformCfgPath) ? platformCfgPath : cfgPath;
-
-                    if(File.Exists(cCfgPath)) {
-                        Log("\treading " + cCfgPath + "...");
-
-                        Config? cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(cCfgPath));
-
-                        try{
-                            if(cfg != null && cfg.cmd != null) {
-                                p = new Process();
-                                p.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
-                                p.StartInfo.UseShellExecute = true;
-
-                                bool cReplaceQuotes = (cfg.replaceQuotes != null ? cfg.replaceQuotes : replaceQuotes) == true;
-
-                                p.StartInfo.Arguments = (cfg.args != null ? cfg.args : shellArgs)
-                                    .Replace("%cmd", cReplaceQuotes ? cfg.cmd.Replace("\"", "\\\"") : cfg.cmd);
-                                Log("\trunning " + p.StartInfo.FileName + " " + p.StartInfo.Arguments + "... (replaceQuotes=" + cReplaceQuotes + ")");
-                                p.Start();
-                                Log("\tprocess id: " + p.Id);
-                                Log("\tdone", true);
-                            }else{
-                                Log("\t\trerror", true);
-                            }
-                        }catch (Exception e){
-                            Log("\t\t" + e.Message, true);
-                        }
-                    }else{
-                        Log("\tconfig.json not found :(", true);
-                    }
+                    RestartApp(p, platformCfgPath, cfgPath, shellArgs, shell, replaceQuotes);
                 }
                 Thread.Sleep(interval * 1000);
                 firstLoop = false;
             }
             Log("bye", true);
+        }
+
+        static void RestartApp(Process? p, string platformCfgPath, string cfgPath, string shellArgs, string shell, bool replaceQuotes) {
+            Log(DateTime.Now.ToShortTimeString() + " - restarting...", true);
+
+            if(p != null) {
+                Log("\tkilling process " + p.Id + "...");
+                try {
+                    p.Kill(true);
+                    Log("\t\tdone");
+                }catch (Exception e){
+                    Log("\t\t" + e.Message);
+                }
+            }
+
+            string cCfgPath = File.Exists(platformCfgPath) ? platformCfgPath : cfgPath;
+
+            if(File.Exists(cCfgPath)) {
+                Log("\treading " + cCfgPath + "...");
+
+                Config? cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(cCfgPath));
+
+                try{
+                    if(cfg != null && cfg.cmd != null) {
+                        p = new Process();
+                        p.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
+                        p.StartInfo.UseShellExecute = true;
+
+                        bool cReplaceQuotes = (cfg.replaceQuotes != null ? cfg.replaceQuotes : replaceQuotes) == true;
+
+                        p.StartInfo.Arguments = (cfg.args != null ? cfg.args : shellArgs)
+                            .Replace("%cmd", cReplaceQuotes ? cfg.cmd.Replace("\"", "\\\"") : cfg.cmd);
+                        Log("\trunning " + p.StartInfo.FileName + " " + p.StartInfo.Arguments + "... (replaceQuotes=" + cReplaceQuotes + ")");
+                        p.Start();
+                        Log("\tprocess id: " + p.Id);
+                        Log("\tdone", true);
+                    }else{
+                        Log("\t\trerror", true);
+                    }
+                }catch (Exception e){
+                    Log("\t\t" + e.Message, true);
+                }
+            }else{
+                Log("\tconfig.json not found :(", true);
+            }
         }
 
         static void Log(string? text, bool important = false) {
