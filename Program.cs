@@ -8,10 +8,21 @@ namespace gitwatcher
     {
         public const string version = "1.0.2";
 
+            
+        static string shell = "sh";
+        static string shellArgs = "-c \"%cmd\"";
+        static bool replaceQuotes = true;
+        static string platformCfgPath = "";
+        static string cfgPath = "";
+        static Process? appProcess = null;
+
         static int interval = 10;
         static bool log = false;
         static void Main(string[] args) {
             OSPlatform platform = GetOperatingSystem();
+
+            platformCfgPath = Path.Combine(".gitwatcher", "config-" + platform.ToString().ToLower() + ".json");
+            cfgPath = Path.Combine(".gitwatcher", "config.json");
 
             for(int i = 0; i < args.Length; i++) {
                 if(args[i] == "--interval" || args[i] == "-i") {
@@ -25,13 +36,6 @@ namespace gitwatcher
                     return;
                 }
             }
-
-            string platformCfgPath = Path.Combine(".gitwatcher", "config-" + platform.ToString().ToLower() + ".json");
-            string cfgPath = Path.Combine(".gitwatcher", "config.json");
-            
-            string shell = "sh";
-            string shellArgs = "-c \"%cmd\"";
-            bool replaceQuotes = true;
 
             if(platform == OSPlatform.Windows) {
                 shell = "cmd.exe";
@@ -53,13 +57,11 @@ namespace gitwatcher
 
             bool firstLoop = true;
 
-            Process? p = null;
-
             Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) => {
-                if(p != null) {
-                    Log("killing process " + p.Id + "...");
+                if(appProcess != null) {
+                    Log("killing process " + appProcess.Id + "...");
                     try {
-                        p.Kill(true);
+                        appProcess.Kill(true);
                         Log("done");
                     }catch{}
                 }
@@ -74,7 +76,7 @@ namespace gitwatcher
                 }
                 Log("git pull: '" + pullResult + "'");
                 if((pullResult != "Already up to date." && !string.IsNullOrWhiteSpace(pullResult)) || firstLoop) {
-                    RestartApp(p, platformCfgPath, cfgPath, shellArgs, shell, replaceQuotes);
+                    RestartApp();
                 }
                 Thread.Sleep(interval * 1000);
                 firstLoop = false;
@@ -82,13 +84,13 @@ namespace gitwatcher
             Log("bye", true);
         }
 
-        static void RestartApp(Process? p, string platformCfgPath, string cfgPath, string shellArgs, string shell, bool replaceQuotes) {
+        static void RestartApp() {
             Log(DateTime.Now.ToShortTimeString() + " - restarting...", true);
 
-            if(p != null) {
-                Log("\tkilling process " + p.Id + "...");
+            if(appProcess != null) {
+                Log("\tkilling process " + appProcess.Id + "...");
                 try {
-                    p.Kill(true);
+                    appProcess.Kill(true);
                     Log("\t\tdone");
                 }catch (Exception e){
                     Log("\t\t" + e.Message);
@@ -104,17 +106,17 @@ namespace gitwatcher
 
                 try{
                     if(cfg != null && cfg.cmd != null) {
-                        p = new Process();
-                        p.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
-                        p.StartInfo.UseShellExecute = true;
+                        appProcess = new Process();
+                        appProcess.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
+                        appProcess.StartInfo.UseShellExecute = true;
 
                         bool cReplaceQuotes = (cfg.replaceQuotes != null ? cfg.replaceQuotes : replaceQuotes) == true;
 
-                        p.StartInfo.Arguments = (cfg.args != null ? cfg.args : shellArgs)
+                        appProcess.StartInfo.Arguments = (cfg.args != null ? cfg.args : shellArgs)
                             .Replace("%cmd", cReplaceQuotes ? cfg.cmd.Replace("\"", "\\\"") : cfg.cmd);
-                        Log("\trunning " + p.StartInfo.FileName + " " + p.StartInfo.Arguments + "... (replaceQuotes=" + cReplaceQuotes + ")");
-                        p.Start();
-                        Log("\tprocess id: " + p.Id);
+                        Log("\trunning " + appProcess.StartInfo.FileName + " " + appProcess.StartInfo.Arguments + "... (replaceQuotes=" + cReplaceQuotes + ")");
+                        appProcess.Start();
+                        Log("\tprocess id: " + appProcess.Id);
                         Log("\tdone", true);
                     }else{
                         Log("\t\trerror", true);
