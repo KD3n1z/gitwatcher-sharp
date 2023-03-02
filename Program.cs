@@ -6,9 +6,13 @@ namespace gitwatcher
 {
     internal static class Program
     {
+        public const string version = "1.0.2";
+
         static int interval = 10;
         static bool log = false;
         static void Main(string[] args) {
+            OSPlatform platform = GetOperatingSystem();
+
             for(int i = 0; i < args.Length; i++) {
                 if(args[i] == "--interval" || args[i] == "-i") {
                     interval = int.Parse(args[i + 1]);
@@ -17,17 +21,15 @@ namespace gitwatcher
                     log = true;
                 }
                 if(args[i] == "--help" || args[i] == "-h") {
-                    Log("usage: gitwatcher [--interval / -i <seconds>] [--log / -l] [--help / -h]", true);
+                    Log("gitwatcher v" + version + ", " + platform + "\n\nUsage: gitwatcher [options]\n\nOptions:\n\t-i --interval <seconds>\tPull interval.\n\t-l --log\t\tLog each action.\n\t-h --help\t\tPrint usage.", true);
                     return;
                 }
             }
 
-            OSPlatform platform = GetOperatingSystem();
-
             string platformCfgPath = Path.Combine(".gitwatcher", "config-" + platform.ToString().ToLower() + ".json");
             string cfgPath = Path.Combine(".gitwatcher", "config.json");
             
-            string shell = "bash";
+            string shell = "sh";
             string shellArgs = "-c \"%cmd\"";
             bool replaceQuotes = true;
 
@@ -43,7 +45,7 @@ namespace gitwatcher
                 return;
             }
 
-            Log("gitwatcher v1.0.1, " + gitVersion +
+            Log("gitwatcher v" + version + ", " + gitVersion +
                 "\n\tpull interval: " + interval + " (seconds)" + 
                 "\n\tlog: " + (log ? "everything" : "important") +
                 "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",
