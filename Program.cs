@@ -39,7 +39,7 @@ namespace gitwatcher
                         Log(
                             "gitwatcher v" + version + 
                             "\n\nUsage: gitwatcher [options]\n\nOptions:" + 
-                            "\n\t-i --interval <seconds>\tPull interval. (Default value: 60)" + 
+                            "\n\t-i --interval <seconds>\tSpecify pull interval." + 
                             "\n\t-l --log\t\tLog each action." + 
                             "\n\t-h --help\t\tPrint usage." + 
                             "\n\t-v --version\t\tPrint current version." + 
