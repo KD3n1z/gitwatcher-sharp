@@ -16,7 +16,7 @@ namespace gitwatcher
         static string cfgPath = "";
         static Process? appProcess = null;
 
-        static int interval = 10;
+        static int interval = 60;
         static bool log = false;
         static void Main(string[] args) {
             OSPlatform platform = GetOperatingSystem();
@@ -25,15 +25,37 @@ namespace gitwatcher
             cfgPath = Path.Combine(".gitwatcher", "config.json");
 
             for(int i = 0; i < args.Length; i++) {
-                if(args[i] == "--interval" || args[i] == "-i") {
-                    interval = int.Parse(args[i + 1]);
-                }
-                if(args[i] == "--log" || args[i] == "-l") {
-                    log = true;
-                }
-                if(args[i] == "--help" || args[i] == "-h") {
-                    Log("gitwatcher v" + version + ", " + platform + "\n\nUsage: gitwatcher [options]\n\nOptions:\n\t-i --interval <seconds>\tPull interval, default value - 10.\n\t-l --log\t\tLog each action.\n\t-h --help\t\tPrint usage.", true);
-                    return;
+                switch(args[i]) {
+                    case "--interval":
+                    case "-i":
+                        interval = int.Parse(args[++i]);
+                        break;
+                    case "--log":
+                    case "-l":
+                        log = true;
+                        break;
+                    case "--help":
+                    case "-h":
+                        Log(
+                            "gitwatcher v" + version + 
+                            "\n\nUsage: gitwatcher [options]\n\nOptions:" + 
+                            "\n\t-i --interval <seconds>\tPull interval. (Default value: 60)" + 
+                            "\n\t-l --log\t\tLog each action." + 
+                            "\n\t-h --help\t\tPrint usage." + 
+                            "\n\t-v --version\t\tPrint current version." + 
+                            "\n\t-u --checkForUpdates\tCheck for newer versions on github.", true);
+                        return;
+                    case "--version":
+                    case "-v":
+                        Log("gitwatcher v" + version, true);
+                        return;
+                    case "-u":
+                    case "--checkForUpdates":
+                        CheckForUpdates();
+                        return;
+                    default:
+                        Error(args[i] + ": invalid option");
+                        return;
                 }
             }
 
@@ -43,9 +65,9 @@ namespace gitwatcher
                 replaceQuotes = false;
             }
 
-            string? gitVersion = Execute("--version");
+            string? gitVersion = ExecuteGitCommand("--version");
             if(gitVersion == null) {
-                Log("error: git not found", true);
+                Error("git not found");
                 return;
             }
 
@@ -69,7 +91,7 @@ namespace gitwatcher
             };
 
             while(true) {
-                string? pullResult = Execute("pull");
+                string? pullResult = ExecuteGitCommand("pull");
                 if(pullResult == null || pullResult.StartsWith("fatal") || pullResult.StartsWith("error")) {
                     Log(pullResult, true);
                     break;
@@ -119,7 +141,7 @@ namespace gitwatcher
                         Log("\tprocess id: " + appProcess.Id);
                         Log("\tdone", true);
                     }else{
-                        Log("\t\trerror", true);
+                        Log("\t\terror", true);
                     }
                 }catch (Exception e){
                     Log("\t\t" + e.Message, true);
@@ -135,7 +157,15 @@ namespace gitwatcher
             }
         }
 
-        static string? Execute(string cmd) {
+        static void Error(string? text) {
+            ConsoleColor fg = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("error: ");
+            Console.ForegroundColor = fg;
+            Console.WriteLine(text);
+        }
+
+        static string? ExecuteGitCommand(string cmd) {
             try {
                 Process p = new Process();
                 p.StartInfo.Arguments = cmd;
@@ -164,6 +194,38 @@ namespace gitwatcher
             }
 
             throw new Exception("Cannot determine operating system!");
+        }
+
+        static void CheckForUpdates() {
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest");
+            request.Headers.Add("User-Agent", "gitwatcher");
+
+            HttpResponseMessage response = new HttpClient().Send(request);
+            
+            GithubApiResponse? apiResponse = JsonSerializer.Deserialize<GithubApiResponse>(response.Content.ReadAsStringAsync().Result);
+
+            if(apiResponse != null && apiResponse.tag_name != null) {
+                Version remoteVersion = new Version(apiResponse.tag_name.Replace("v", ""));
+                Version localVersion = new Version(version);
+
+                if(remoteVersion > localVersion) {
+                    Log("Newer version available:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion + "\n\n" + apiResponse.html_url, true);
+                }else{
+                    Log("No need to update:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion, true);
+                }
+            }else{
+                Error("request error; status code: " + response.StatusCode);
+                return;
+            }
+        }
+    }
+
+    class GithubApiResponse {
+        public string? tag_name {
+            get; set;
+        }
+        public string? html_url {
+            get; set;
         }
     }
 
