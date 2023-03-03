@@ -73,7 +73,7 @@ namespace gitwatcher
 
             Log("gitwatcher v" + version + ", " + gitVersion +
                 "\n\tpull interval: " + interval + " (seconds)" + 
-                "\n\tlog: " + (log ? "everything" : "important") +
+                (log ? "\n\tlog: everything" : "") +
                 "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",
             true);
 
