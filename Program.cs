@@ -6,7 +6,7 @@ namespace gitwatcher
 {
     internal static class Program
     {
-        public const string version = "1.0.2";
+        public const string version = "1.0.3";
 
             
         static string shell = "sh";
@@ -128,6 +128,13 @@ namespace gitwatcher
 
                 try{
                     if(cfg != null && cfg.cmd != null) {
+                        if(cfg.interval != null) {
+                            if(cfg.interval != interval) {
+                                interval = (int)cfg.interval;
+                                Log("\tinterval=" + interval + "s");
+                            }
+                        }
+
                         appProcess = new Process();
                         appProcess.StartInfo.FileName = cfg.fileName != null ? cfg.fileName : shell;
                         appProcess.StartInfo.UseShellExecute = true;
@@ -240,6 +247,9 @@ namespace gitwatcher
             get; set;
         }
         public bool? replaceQuotes {
+            get; set;
+        }
+        public int? interval {
             get; set;
         }
     }
