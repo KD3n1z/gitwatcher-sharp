@@ -92,7 +92,7 @@ namespace gitwatcher
 
             while(true) {
                 string? pullResult = ExecuteGitCommand("pull");
-                if(pullResult == null || pullResult.StartsWith("fatal") || pullResult.StartsWith("error")) {
+                if(pullResult == null || pullResult.ToLower().StartsWith("fatal") || pullResult.ToLower().StartsWith("error")) {
                     Log(pullResult, true);
                     break;
                 }
