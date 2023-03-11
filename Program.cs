@@ -54,7 +54,7 @@ namespace gitwatcher
                         CheckForUpdates();
                         return;
                     default:
-                        Error(args[i] + ": invalid option");
+                        LogError(args[i] + ": invalid option");
                         return;
                 }
             }
@@ -63,11 +63,13 @@ namespace gitwatcher
                 shell = "cmd.exe";
                 shellArgs = "/C%cmd";
                 replaceQuotes = false;
+            }else if(platform == OSPlatform.FreeBSD) {
+                LogWarning("gitwatcher has not been tested on FreeBSD, use at your own risk");
             }
 
             string? gitVersion = ExecuteGitCommand("--version");
             if(gitVersion == null) {
-                Error("git not found");
+                LogError("git not found");
                 return;
             }
 
@@ -164,10 +166,18 @@ namespace gitwatcher
             }
         }
 
-        static void Error(string? text) {
+        static void LogError(string? text) {
             ConsoleColor fg = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Write("error: ");
+            Console.ForegroundColor = fg;
+            Console.WriteLine(text);
+        }
+
+        static void LogWarning(string? text) {
+            ConsoleColor fg = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write("warning: ");
             Console.ForegroundColor = fg;
             Console.WriteLine(text);
         }
@@ -193,11 +203,14 @@ namespace gitwatcher
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
                 return OSPlatform.OSX;
             }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                return OSPlatform.Windows;
+            }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
                 return OSPlatform.Linux;
             }
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return OSPlatform.Windows;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)) {
+                return OSPlatform.FreeBSD;
             }
 
             throw new Exception("Cannot determine operating system!");
@@ -221,7 +234,7 @@ namespace gitwatcher
                     Log("No need to update:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion, true);
                 }
             }else{
-                Error("request error; status code: " + response.StatusCode);
+                LogError("request error; status code: " + response.StatusCode);
                 return;
             }
         }
