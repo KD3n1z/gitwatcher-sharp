@@ -6,7 +6,7 @@ namespace gitwatcher
 {
     internal static class Program
     {
-        public const string version = "1.0.3";
+        public const string version = "1.0.4";
 
             
         static string shell = "sh";
@@ -95,7 +95,7 @@ namespace gitwatcher
             while(true) {
                 string? pullResult = ExecuteGitCommand("pull");
                 if(pullResult == null || pullResult.ToLower().StartsWith("fatal") || pullResult.ToLower().StartsWith("error")) {
-                    Log(pullResult, true);
+                    LogError("\"" + pullResult + "\"");
                     break;
                 }
                 Log("git pull: '" + pullResult + "'");
