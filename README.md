@@ -1,7 +1,7 @@
 # gitwatcher
 gitwatcher will be looking for changes in git, immediately pull them, and then restart your program (you can specify start command in .gitwatcher/config.json)
 
-Here's a [demo](https://github.com/KD3n1z/gitwatcherDemo)
+Here's a [demo](https://github.com/KD3n1z/gitwatcher-demo)
 
 ## Usage
 gitwatcher [options]
