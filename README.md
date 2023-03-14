@@ -23,7 +23,7 @@ You can use webhook mode + [github webhooks](https://docs.github.com/en/webhooks
     - Content type: <code>application/json</code>
     - Secret: <code>[secret]</code>
 
-    <img src="https://raw.githubusercontent.com/KD3n1z/kd3n1z-com/main/webhook-github.png" width="30%">
+    <img src="https://raw.githubusercontent.com/KD3n1z/kd3n1z-com/main/webhook-github.png" width="50%">
 - Start gitwatcher with <code>gitwatcher --port [port] --secret [secret]</code>
 
 ## Installing
