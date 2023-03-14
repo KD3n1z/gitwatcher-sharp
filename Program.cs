@@ -9,7 +9,7 @@ namespace gitwatcher
 {
     internal static class Program
     {
-        public const string version = "1.0.4";
+        public const string version = "1.1.0";
 
             
         static string shell = "sh";
