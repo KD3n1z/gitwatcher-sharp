@@ -1,5 +1,8 @@
 ﻿using System.Diagnostics;
+using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace gitwatcher
@@ -15,6 +18,10 @@ namespace gitwatcher
         static string platformCfgPath = "";
         static string cfgPath = "";
         static Process? appProcess = null;
+
+        // webhook mode
+        static int? port = null;
+        static string? secret = null;
 
         static int interval = 60;
         static bool log = false;
@@ -43,7 +50,9 @@ namespace gitwatcher
                             "\n\t-l --log\t\tLog each action." + 
                             "\n\t-h --help\t\tPrint usage." + 
                             "\n\t-v --version\t\tPrint current version." + 
-                            "\n\t-u --checkForUpdates\tCheck for newer versions on github.", true);
+                            "\n\t-u --checkForUpdates\tCheck for newer versions on github" +
+                            "\n\t-p --port <port>\tSpecify http server port (webhook mode)." + 
+                            "\n\t-s --secret <secret>\tSpecify webhook secret (webhook mode).", true);
                         return;
                     case "--version":
                     case "-v":
@@ -53,6 +62,14 @@ namespace gitwatcher
                     case "--checkForUpdates":
                         CheckForUpdates();
                         return;
+                    case "-p":
+                    case "--port":
+                        port = int.Parse(args[++i]);
+                        break;
+                    case "-s":
+                    case "--secret":
+                        secret = args[++i];
+                        break;
                     default:
                         LogError(args[i] + ": invalid option");
                         return;
@@ -67,6 +84,10 @@ namespace gitwatcher
                 LogWarning("gitwatcher has not been tested on FreeBSD, use at your own risk");
             }
 
+            if(secret != null && port == null) {
+                LogWarning("webhook mode is disabled, specify --port to enable it");
+            }
+
             string? gitVersion = ExecuteGitCommand("--version");
             if(gitVersion == null) {
                 LogError("git not found");
@@ -74,23 +95,44 @@ namespace gitwatcher
             }
 
             Log("gitwatcher v" + version + ", " + gitVersion +
-                "\n\tpull interval: " + interval + " (seconds)" + 
+                (port == null ? "\n\tpull interval: " + interval + " (seconds)" : "\n\twebhook mode, port: " + port.ToString()) + 
                 (log ? "\n\tlog: everything" : "") +
                 "\n\tplatform: " + platform + " (" + shell + " " + shellArgs + ")",
             true);
 
-            bool firstLoop = true;
+            HttpListener? server = null;
 
             Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) => {
                 if(appProcess != null) {
                     Log("killing process " + appProcess.Id + "...");
                     try {
                         appProcess.Kill(true);
-                        Log("done");
+                        Log("\tdone");
+                    }catch{}
+                }
+                if(server != null) {
+                    Log("stopping http server...");
+                    try{
+                        server.Stop();
+                        server.Close();
+                        Log("\tdone");
                     }catch{}
                 }
                 eventArgs.Cancel = false;
             };
+
+            if(port != null) {
+                Log("starting http server... ", true);
+                server = new HttpListener();
+                server.Prefixes.Add("http://*:" + port.ToString() + "/");
+                Log("\tprefixes:");
+                foreach(string prefix in server.Prefixes) {
+                    Log("\t\t" + prefix);
+                }
+                server.Start();
+            }
+
+            bool firstLoop = true;
 
             while(true) {
                 string? pullResult = ExecuteGitCommand("pull");
@@ -102,7 +144,77 @@ namespace gitwatcher
                 if((pullResult != "Already up to date." && !string.IsNullOrWhiteSpace(pullResult)) || firstLoop) {
                     RestartApp();
                 }
-                Thread.Sleep(interval * 1000);
+                if(server == null) {
+                    Thread.Sleep(interval * 1000);
+                }else{
+                    bool cycle = true;
+                    while(cycle) {
+                        HttpListenerContext? context = server.GetContext();
+                        Log("request received:");
+                        if(context != null) {
+                            try{
+                                string resp = "error";
+                                switch(context.Request.Headers["X-Github-Event"]) {
+                                    case "ping":
+                                        resp = "pong";
+                                        break;
+                                    case "push":
+                                        Log("\tpush...");
+                                        bool needToPull = false;
+                                        if(secret != null) {
+                                            Log("\t\tveryfing hash...");
+                                            string data = "";
+                                            using(StreamReader sr = new StreamReader(context.Request.InputStream)) {
+                                                data = sr.ReadToEnd();
+                                            }
+                                            Log("\t\t\tcomputing...");
+                                            DateTime startDT = DateTime.Now;
+                                            string hashStr = "";
+                                            using (HMACSHA256 hash = new HMACSHA256(Encoding.UTF8.GetBytes(secret))) {
+                                                StringBuilder sb = new StringBuilder();
+
+                                                foreach(byte b in hash.ComputeHash(Encoding.UTF8.GetBytes(data))) {
+                                                    sb.Append(b.ToString("x2"));
+                                                }
+
+                                                hashStr = sb.ToString();
+                                            }
+                                            Log("\t\t\t\tdone in " + DateTime.Now.Subtract(startDT).TotalMilliseconds + "ms");
+                                            hashStr = "sha256=" + hashStr;
+                                            string? reqHash = context.Request.Headers["X-Hub-Signature-256"];
+                                            Log("\t\tactual hash:  " + hashStr + "\n\t\trequest hash: " + reqHash);
+                                            if(hashStr == reqHash) {
+                                                needToPull = true;
+                                                Log("\t\tverified!");
+                                            }
+                                        }
+                                        else {
+                                            needToPull = true;
+                                        }
+
+                                        if(needToPull) {
+                                            resp = "updating...";
+                                            Log("\t\tpulling...");
+                                            cycle = false;
+                                        }else{
+                                            resp = "access denied";
+                                        }
+                                        break;
+                                    default: 
+                                        break;
+                                }
+                                byte[] buffer = Encoding.UTF8.GetBytes(resp);
+                                context.Response.ContentLength64 = buffer.Length;
+                                context.Response.OutputStream.Write(buffer);
+                                context.Response.OutputStream.Flush();
+                                Log("\twriting \"" + resp + "\"...");
+                            }catch(Exception err){
+                                LogWarning("http error: " + err.Message);
+                            }
+                        }
+                    }
+                    Thread.Sleep(1000);
+                }
                 firstLoop = false;
             }
             Log("bye", true);
