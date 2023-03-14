@@ -124,7 +124,7 @@ namespace gitwatcher
             if(port != null) {
                 Log("starting http server... ", true);
                 server = new HttpListener();
-                server.Prefixes.Add("http://*:" + port.ToString() + "/");
+                server.Prefixes.Add("http://*:" + port.ToString() + "/webhook/");
                 Log("\tprefixes:");
                 foreach(string prefix in server.Prefixes) {
                     Log("\t\t" + prefix);

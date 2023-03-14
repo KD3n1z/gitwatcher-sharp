@@ -18,10 +18,13 @@ Options:
 
 ### Webhook mode
 You can use webhook mode + [github webhooks](https://docs.github.com/en/webhooks-and-events/webhooks/about-webhooks) to make gitwatcher more effective:
-- Start gitwatcher with <code>gitwatcher --port [port] --secret [secret]</code>
 - Create new webhook in settings of your github repo:
-    - http://[ip]:[port]/webhook
-    - [secret]
+    - Payload URL: <code>http://[ip]:[port]/webhook</code>
+    - Content type: <code>application/json</code>
+    - Secret: <code>[secret]</code>
+
+    <img src="https://raw.githubusercontent.com/KD3n1z/kd3n1z-com/main/webhook-github.png" width="30%">
+- Start gitwatcher with <code>gitwatcher --port [port] --secret [secret]</code>
 
 ## Installing
 1. Download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
