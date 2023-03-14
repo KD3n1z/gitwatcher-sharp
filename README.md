@@ -12,14 +12,23 @@ Options:
 * <code>-h --help</code> - Print usage.
 * <code>-v --version</code> - Print current version.
 * <code>-u --checkForUpdates</code> - Check for newer versions on github.
-        
+* <code>-p --port \<port\></code> - Specify http server port (webhook mode).
+* <code>-s --secret \<secret\></code> - Specify webhook secret (webhook mode).
+
+
+### Webhook mode
+You can use webhook mode + [github webhooks](https://docs.github.com/en/webhooks-and-events/webhooks/about-webhooks) to make gitwatcher more effective:
+- Start gitwatcher with <code>gitwatcher --port [port] --secret [secret]</code>
+- Create new webhook in settings of your github repo:
+    - http://[ip]:[port]/webhook
+    - [secret]
 
 ## Installing
-1. download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
-2. unzip it
-3. move it to your bin directory:<br>
-    typically <code>/usr/local/bin</code> on macOS/linux<br>
-    typically <code>C:\Windows</code> on Windows
+1. Download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
+2. Unzip it
+3. Move it to your bin directory:<br>
+    - typically <code>/usr/local/bin</code> on macOS/linux<br>
+    - typically <code>C:\Windows</code> on Windows
 
 ## Building
 Requirements:
