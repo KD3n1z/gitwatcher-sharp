@@ -9,9 +9,9 @@ namespace gitwatcher
 {
     internal static class Program
     {
-        public const string version = "1.1.0";
+        public const string version = "1.1.1";
 
-            
+        static OSPlatform platform;
         static string shell = "sh";
         static string shellArgs = "-c \"%cmd\"";
         static bool replaceQuotes = true;
@@ -25,8 +25,9 @@ namespace gitwatcher
 
         static int interval = 60;
         static bool log = false;
+        
         static void Main(string[] args) {
-            OSPlatform platform = GetOperatingSystem();
+            platform = GetOperatingSystem();
 
             platformCfgPath = Path.Combine(".gitwatcher", "config-" + platform.ToString().ToLower() + ".json");
             cfgPath = Path.Combine(".gitwatcher", "config.json");
@@ -328,7 +329,7 @@ namespace gitwatcher
             throw new Exception("Cannot determine operating system!");
         }
 
-        static void CheckForUpdates() {
+        static bool CheckForUpdates() {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest");
             request.Headers.Add("User-Agent", "gitwatcher");
 
@@ -341,22 +342,52 @@ namespace gitwatcher
                 Version localVersion = new Version(version);
 
                 if(remoteVersion > localVersion) {
-                    Log("Newer version available:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion + "\n\n" + apiResponse.html_url, true);
+                    string downloadUrl = "?";
+                    if(apiResponse.assets != null) {
+                        string platformStr = platform.ToString().ToLower();
+                        string archStr = RuntimeInformation.ProcessArchitecture.ToString().ToLower();
+                        foreach(GithubApiResponse.ReleaseAsset asset in apiResponse.assets) {
+                            string compareString = apiResponse.html_url ?? "?";
+                            if(asset.name != null) {
+                                compareString = asset.name.ToLower().Split('.')[0];
+                            }
+                            if(compareString == platformStr || compareString == platformStr + "-" + archStr) {
+                                if(asset.browser_download_url != null) {
+                                    downloadUrl = asset.browser_download_url;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    Log("Newer version available:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion + "\n\n" + downloadUrl, true);
+                    return true;
                 }else{
                     Log("No need to update:\n\tlocal: v" + localVersion + "\n\tremote: v" + remoteVersion, true);
                 }
             }else{
                 LogError("request error; status code: " + response.StatusCode);
-                return;
             }
+            return false;
         }
     }
 
     class GithubApiResponse {
+        public class ReleaseAsset {
+            public string? name {
+                get; set;
+            }
+            public string? browser_download_url {
+                get; set;
+            }
+        }
+
         public string? tag_name {
             get; set;
         }
         public string? html_url {
+            get; set;
+        }
+        public ReleaseAsset[]? assets {
             get; set;
         }
     }
