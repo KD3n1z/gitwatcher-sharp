@@ -38,7 +38,7 @@ Requirements:
 - [dotnet 6.0](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) or higher
 
 Run this command:<br>
-- <code>dotnet publish --self-contained -c Release -p:PublishSingleFile=true -o dest</code><br>
+- <code>dotnet publish --use-current-runtime --self-contained -c Release -p:PublishSingleFile=true -o dest</code><br>
 
 or, if you have make installed:<br>
 - <code>make publish</code>

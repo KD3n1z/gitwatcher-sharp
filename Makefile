@@ -38,7 +38,7 @@ zip-all:
 paz: publish-all zip-all
 
 publish:
-	dotnet publish -o dest $(pArgs)
+	dotnet publish --use-current-runtime -o dest $(pArgs)
 
 install:
 	sudo cp dest/gitwatcher /usr/local/bin
