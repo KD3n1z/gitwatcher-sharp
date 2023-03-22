@@ -1,3 +1,6 @@
+## This repository is outdated!
+---> https://github.com/KD3n1z/gitwatcher <---
+
 # gitwatcher
 gitwatcher will be looking for changes in git, immediately pull them, and then restart your program (you can specify start command in .gitwatcher/config.json)
 
